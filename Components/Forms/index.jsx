@@ -1,95 +1,74 @@
 import { useState, useEffect } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { useHistory } from "react-router-dom";
-import { createUser, updateUser } from "../../../redux/usersSlice/apiCalls";
+import { useDispatch, useSelector } from "react-redux";
+import { useParams, useHistory } from "react-router-dom";
+import { createSong, updateSong } from "../../../redux/songsSlice/apiCalls";
+import { toast } from "react-toastify";
 import Joi from "joi";
-import passwordComplexity from "joi-password-complexity";
-import { useParams } from "react-router-dom";
-import { Paper } from "@mui/material";
-import Button from "../../Button";
 import TextField from "../../Inputs/TextField";
-import Select from "../../Inputs/Select";
-import Radio from "../../Inputs/Radio";
-import PersonIcon from "@mui/icons-material/Person";
+import FileInput from "../../Inputs/FileInput";
+import Button from "../../Button";
+import { Paper } from "@mui/material";
+import MusicNoteIcon from "@mui/icons-material/MusicNote";
+import ImageIcon from "@mui/icons-material/Image";
 import styles from "./styles.module.scss";
 
-const months = [
-	{ name: "January", value: "01" },
-	{ name: "February", value: "02" },
-	{ name: "March", value: "03" },
-	{ name: "Apirl", value: "04" },
-	{ name: "May", value: "05" },
-	{ name: "June", value: "06" },
-	{ name: "July", value: "07" },
-	{ name: "Augest", value: "08" },
-	{ name: "September", value: "09" },
-	{ name: "October", value: "10" },
-	{ name: "November", value: "11" },
-	{ name: "December", value: "12" },
-];
-
-const genders = ["male", "female", "non-binary"];
-
-const UserForm = () => {
+const SongForm = () => {
 	const [data, setData] = useState({
-		email: "",
-		password: "",
 		name: "",
-		month: "",
-		year: "",
-		date: "",
-		gender: "",
+		artist: "",
+		img: null,
+		song: null,
+		duration: 0,
 	});
-	const { users, createUserProgress, updateUserProgress } = useSelector(
-		(state) => state.users
+	const [errors, setErrors] = useState({ name: "", artist: "" });
+	const { songs, createSongProgress, updateSongProgress } = useSelector(
+		(state) => state.songs
 	);
-	const [errors, setErrors] = useState({});
 	const { id } = useParams();
 	const dispatch = useDispatch();
 	const history = useHistory();
+
+	useEffect(() => {
+		const song = songs.filter((song) => song._id === id);
+		if (id !== "new" && song[0]) {
+			setData({
+				name: song[0].name,
+				artist: song[0].artist,
+				song: song[0].song,
+				img: song[0].img,
+			});
+		}
+	}, [id, songs]);
+
+	const schema = {
+		name: Joi.string().required().label("Name"),
+		artist: Joi.string().required().label("Artist"),
+		img: Joi.string().required().label("Image"),
+		song: Joi.string().required().label("Song"),
+		duration: Joi.number().required(),
+	};
 
 	const handleInputState = (name, value) => {
 		setData((prev) => ({ ...prev, [name]: value }));
 	};
 
 	const handleErrorState = (name, value) => {
-		value === ""
-			? delete errors[name]
-			: setErrors((errors) => ({ ...errors, [name]: value }));
+		setErrors((prev) => ({ ...prev, [name]: value }));
 	};
-
-	const schema = {
-		email: Joi.string().email({ tlds: false }).required().label("Email"),
-		password: passwordComplexity().required().label("Password"),
-		name: Joi.string().min(3).max(10).required().label("Name"),
-	};
-
-	useEffect(() => {
-		if (id !== "new" && users) {
-			const user = users.filter((user) => user._id === id);
-			setData({
-				email: user[0].email,
-				name: user[0].name,
-				month: user[0].month,
-				year: user[0].year,
-				date: user[0].date,
-				gender: user[0].gender,
-			});
-		}
-	}, [id, users]);
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		if (Object.keys(errors).length === 0) {
-			if (id !== "new") {
-				const res = await updateUser(id, data, dispatch);
-				res && history.push("/users");
+		const { error } = Joi.object(schema).validate(data);
+		if (!error) {
+			if (id === "new") {
+				const res = await createSong(data, dispatch);
+				res && history.push("/songs");
 			} else {
-				const res = await createUser(data, dispatch);
-				res && history.push("/users");
+				const res = await updateSong(id, data, dispatch);
+				res && history.push("/songs");
 			}
 		} else {
-			console.log("please fill out properly");
+			toast.error(error.message);
 		}
 	};
 
@@ -97,101 +76,57 @@ const UserForm = () => {
 		<div className={styles.container}>
 			<Paper className={styles.form_container}>
 				<h1 className={styles.heading}>
-					{id === "new" ? "Add New User" : "Edit User"} <PersonIcon />
+					{id === "new" ? "Add New Song" : "Edit Song"} <MusicNoteIcon />
 				</h1>
 				<form onSubmit={handleSubmit}>
 					<div className={styles.input_container}>
 						<TextField
-							label="What's your email?"
-							placeholder="Enter your email"
-							name="email"
+							name="name"
+							label="Enter song name"
 							handleInputState={handleInputState}
-							schema={schema.email}
 							handleErrorState={handleErrorState}
-							value={data.email}
-							error={errors.email}
+							schema={schema.name}
+							error={errors.name}
+							value={data.name}
 							required={true}
 						/>
 					</div>
-					{id === "new" && (
-						<div className={styles.input_container}>
-							<TextField
-								label="Create a password"
-								placeholder="Create a password"
-								name="password"
-								handleInputState={handleInputState}
-								schema={schema.password}
-								handleErrorState={handleErrorState}
-								value={data.password}
-								error={errors.password}
-								type="password"
-								required={true}
-							/>
-						</div>
-					)}
 					<div className={styles.input_container}>
 						<TextField
-							label="What should we call you?"
-							placeholder="Enter a profile name"
-							name="name"
+							name="artist"
+							label="Artist name"
 							handleInputState={handleInputState}
-							schema={schema.name}
-							handleErrorState={handleErrorState}
-							value={data.name}
-							error={errors.name}
 							required={true}
+							value={data.artist}
+							handleErrorState={handleErrorState}
+							schema={schema.artist}
+							error={errors.artist}
 						/>
 					</div>
-					<div className={styles.date_of_birth_container}>
-						<p>What's your date of birth?</p>
-						<div className={styles.date_of_birth}>
-							<div className={styles.month}>
-								<Select
-									name="month"
-									handleInputState={handleInputState}
-									label="Month"
-									placeholder="Months"
-									options={months}
-									value={data.month}
-									required={true}
-								/>
-							</div>
-							<div className={styles.date}>
-								<TextField
-									label="Date"
-									placeholder="DD"
-									name="date"
-									value={data.date}
-									handleInputState={handleInputState}
-									required={true}
-								/>
-							</div>
-							<div className={styles.year}>
-								<TextField
-									label="Year"
-									placeholder="YYYY"
-									name="year"
-									value={data.year}
-									handleInputState={handleInputState}
-									required={true}
-								/>
-							</div>
-						</div>
-					</div>
-					<div className={styles.input_container}>
-						<Radio
-							label="What's your gender?"
-							name="gender"
+					<div className={styles.file_container}>
+						<FileInput
+							label="Choose song"
+							icon={<MusicNoteIcon />}
+							type="audio"
+							name="song"
 							handleInputState={handleInputState}
-							options={genders}
-							value={data.gender}
-							required={true}
+							value={data.song}
+						/>
+					</div>
+					<div className={styles.file_container}>
+						<FileInput
+							label="Choose image"
+							icon={<ImageIcon />}
+							type="image"
+							name="img"
+							value={data.img}
+							handleInputState={handleInputState}
 						/>
 					</div>
 					<Button
 						type="submit"
 						label={id === "new" ? "Submit" : "Update"}
-						isFetching={id === "new" ? createUserProgress : updateUserProgress}
+						isFetching={id === "new" ? createSongProgress : updateSongProgress}
 						style={{ marginLeft: "auto" }}
 					/>
 				</form>
@@ -200,4 +135,4 @@ const UserForm = () => {
 	);
 };
 
-export default UserForm;
+export default SongForm;

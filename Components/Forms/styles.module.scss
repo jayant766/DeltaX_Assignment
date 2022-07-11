@@ -23,42 +23,6 @@
 			margin: 0.5rem 0;
 		}
 
-		.date_of_birth_container {
-			display: flex;
-			flex-direction: column;
-			width: 100%;
-			margin: 0.5rem 0;
-
-			p {
-				margin: 0.5rem 0;
-				font-weight: 500;
-				font-size: 1.4rem;
-			}
-
-			.date_of_birth {
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
-				width: 100%;
-
-				p {
-					font-weight: normal;
-				}
-
-				.month {
-					width: 40%;
-				}
-
-				.date {
-					width: 20%;
-				}
-
-				.year {
-					width: 30%;
-				}
-			}
-		}
-
 		.file_container {
 			margin: 2rem 0;
 		}
